@@ -34,6 +34,29 @@ double simpleRMS(VectorXd arr)
 	return rms;
 }
 
+double* getRMS(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	double* rms = new double[mat.rows()];
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		rms[i] = (numext::sqrt((mat.row(i).squaredNorm()) / mat.cols()));
+	}
+	
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleRMS]------" << endl;
+	for (int i = 0; i < mat.rows(); i++)
+	{
+		cout << "value " << i << " : " << rms[i] << endl;
+	}
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+
+	return rms;
+}
+
 double simpleMEAN(VectorXd arr)
 {
 	auto start = chrono::high_resolution_clock::now();
@@ -43,6 +66,28 @@ double simpleMEAN(VectorXd arr)
 
 	cout << "-----[simpleMEAN]------" << endl;
 	cout << "value : " << mean << endl;
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+	return mean;
+}
+
+double* getMean(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+	double* mean = new double[mat.rows()];
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		mean[i] = mat.row(i).mean();
+	}
+	//const double mean = arr.mean();
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+
+	cout << "-----[simpleMEAN]------" << endl;
+	for (int i = 0; i < mat.rows(); i++)
+	{
+		cout << "value " << i << " : " << mean[i] << endl;
+	}
 	cout << "duration : " << duration.count() << "ms" << endl;
 	cout << "----------------------" << endl;
 	return mean;
@@ -69,6 +114,35 @@ double simpleMEANH(VectorXd arr)
 	return meanH;
 }
 
+double* getMEANH(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+	double* meanH = new double [mat.rows()];
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		double sum = 0;
+		for (size_t j = 0; j < mat.cols(); j++)
+		{
+			if (mat(i, j) == 0)
+			{
+				mat(i, j) = numeric_limits<double>::infinity();
+			}
+			sum += 1.0 / mat(i, j);
+		}
+		meanH[i] = mat.cols() / sum;
+	}
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleMEANH]------" << endl;
+	for (int i = 0; i < mat.rows(); i++)
+	{
+		cout << "value " << i << " : " << meanH[i] << endl;
+	}
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+	return meanH;
+}
+
 double simpleMEANG(VectorXd arr)
 {
 	auto start = chrono::high_resolution_clock::now();
@@ -77,6 +151,26 @@ double simpleMEANG(VectorXd arr)
 	chrono::duration<double, milli> duration = end - start;
 	cout << "-----[simpleMEANG]------" << endl;
 	cout << "value : " << meanG << endl;
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+	return meanG;
+}
+
+double* getMEANG(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+	double* meanG = new double(mat.rows());
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		meanG[i] = pow(mat.row(i).prod(), 1.0 / mat.cols());
+	}
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleMEANG]------" << endl;
+	for (int i = 0; i < mat.rows(); i++)
+	{
+		cout << "value " << i << " : " << meanG[i] << endl;
+	}
 	cout << "duration : " << duration.count() << "ms" << endl;
 	cout << "----------------------" << endl;
 	return meanG;
@@ -92,6 +186,28 @@ double simpleSTDEV(VectorXd arr)
 	chrono::duration<double, milli> duration = end - start;
 	cout << "-----[simpleSTDEV]------" << endl;
 	cout << "value : " << stdev << endl;
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+	return stdev;
+}
+
+double* getSTDEV(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	double* stdev = new double(mat.rows());
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		stdev[i] = numext::sqrt((mat.row(i).array() - mat.row(i).mean()).square().sum() / (mat.cols() - 1));
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleSTDEV]------" << endl;
+	for (int i = 0; i < mat.rows(); i++)
+	{
+		cout << "value " << i << " : " << stdev[i] << endl;
+	}
 	cout << "duration : " << duration.count() << "ms" << endl;
 	cout << "----------------------" << endl;
 	return stdev;
@@ -113,6 +229,32 @@ double simpleSKEWNESS(VectorXd arr)
 	return skewness;
 }
 
+double* getSKEWNESS(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	//auto stdev = simpleSTDEV(arr);
+	//double skewness = ((arr.array() - arr.mean()).pow(3)).sum() / ((arr.size() - 1) * pow(stdev, 3));
+
+	const double* stdevs = getSTDEV(mat);
+	double* skewness = new double(mat.rows());
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		skewness[i] = ((mat.row(i).array() - mat.row(i).mean()).pow(3)).sum() / ((mat.cols() - 1) * pow(stdevs[i], 3));
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleSKEWNESS]------" << endl;
+	for (int i = 0; i < mat.rows(); i++)
+	{
+		cout << "value " << i << " : " << skewness[i] << endl;
+	}
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+	return skewness;
+}
+
 double simpleKURTOSIS(VectorXd arr)
 {
 	auto start = chrono::high_resolution_clock::now();
@@ -128,6 +270,34 @@ double simpleKURTOSIS(VectorXd arr)
 	cout << "duration : " << duration.count() << "ms" << endl;
 	cout << "----------------------" << endl;
 	return kurtosis;
+}
+
+double* getKURTOSIS(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	int n_rows = mat.rows();
+	double* kurtosis_arr = new double[n_rows];
+
+	for (int i = 0; i < n_rows; i++) {
+		VectorXd row = mat.row(i);
+		double std_dev = simpleSTDEV(row);
+		double sum = ((row.array() - row.mean()).pow(4)).sum();
+		double kurtosis = sum / (row.size() * pow(std_dev, 4)) - 3;
+		kurtosis_arr[i] = kurtosis;
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleKURTOSIS]------" << endl;
+	for (int i = 0; i < mat.rows(); i++)
+	{
+		cout << "value " << i << " : " << kurtosis_arr[i] << endl;
+	}
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+
+	return kurtosis_arr;
 }
 
 double* simpleMODES(VectorXd arr)
@@ -198,6 +368,45 @@ double simpleMODE(VectorXd arr)
 	return mode;
 }
 
+double* getMODE(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	double* modes = new double[mat.rows()];
+	for (size_t i = 0; i < mat.rows(); i++) {
+		VectorXd arr = mat.row(i);
+		sort(arr.data(), arr.data() + arr.size());
+		double mode = 0, max_freq = 0, freq = 1;
+		for (size_t j = 1; j < arr.size(); j++) {
+			if (arr(j) == arr(j - 1)) {
+				freq++;
+			}
+			else {
+				if (freq > max_freq) {
+					max_freq = freq;
+					mode = arr(j - 1);
+				}
+				freq = 1;
+			}
+		}
+		if (freq > max_freq) {
+			mode = arr(arr.size() - 1);
+		}
+		modes[i] = mode;
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleMODE]------" << endl;
+	for (int i = 0; i < mat.rows(); i++) {
+		cout << "value " << i << " : " << modes[i] << endl;
+	}
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+
+	return modes;
+}
+
 double simpleMEDIAN(VectorXd arr)
 {
 	auto start = chrono::high_resolution_clock::now();
@@ -234,6 +443,57 @@ double simpleMEDIAN(VectorXd arr)
 	return medianValue;
 }
 
+double* getMEDIAN(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	size_t nRows = mat.rows();
+	size_t nCols = mat.cols();
+
+	double* medianArr = new double[nRows];
+
+	for (size_t i = 0; i < nRows; i++)
+	{
+		VectorXd arr = mat.row(i);
+		int nCnt = arr.size();
+		double medianValue = 0;
+		if (nCnt % 2 == 0)
+		{
+			int medianIdx1 = (nCnt / 2) - 1;
+			nth_element(arr.data(), arr.data() + medianIdx1, arr.data() + nCnt);
+			double medianValue1 = arr(medianIdx1);
+
+			int medianIdx2 = nCnt / 2;
+			nth_element(arr.data(), arr.data() + medianIdx2, arr.data() + nCnt);
+			double medianValue2 = arr(medianIdx2);
+
+			medianValue = (medianValue1 + medianValue2) / 2.0;
+
+		}
+		else
+		{
+			int medianIdx = nCnt / 2;
+
+			nth_element(arr.data(), arr.data() + medianIdx, arr.data() + nCnt);
+			medianValue = arr(medianIdx);
+		}
+
+		medianArr[i] = medianValue;
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleMEDIAN]------" << endl;
+	for (size_t i = 0; i < nRows; i++)
+	{
+		cout << "row " << i << " : " << medianArr[i] << endl;
+	}
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+
+	return medianArr;
+}
+
 double simpleQ1(VectorXd arr)
 {
 	auto start = chrono::high_resolution_clock::now();
@@ -259,12 +519,46 @@ double simpleQ1(VectorXd arr)
 	return q1;
 }
 
+double* getQ1(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	int n_rows = mat.rows();
+	double* q1 = new double[n_rows];
+
+	for (int i = 0; i < n_rows; i++)
+	{
+		VectorXd lower_half = mat.row(i).segment(0, mat.cols() / 2);
+		sort(lower_half.data(), lower_half.data() + lower_half.size());
+		if (lower_half.size() % 2 == 0)
+		{
+			q1[i] = (lower_half(lower_half.size() / 2 - 1) + lower_half(lower_half.size() / 2)) / 2.0;
+		}
+		else
+		{
+			q1[i] = lower_half(lower_half.size() / 2);
+		}
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleQ1]------" << endl;
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		cout << "row " << i << " : " << q1[i] << endl;
+	}
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+
+	return q1;
+}
+
 double simpleQ3(VectorXd arr)
 {
 	auto start = chrono::high_resolution_clock::now();
 
 	double q3;
-	Eigen::VectorXd upper_half = arr.segment((arr.size() + 1) / 2, arr.size() / 2); 
+	VectorXd upper_half = arr.segment((arr.size() + 1) / 2, arr.size() / 2); 
 	sort(upper_half.data(), upper_half.data() + upper_half.size()); 
 	if (upper_half.size() % 2 == 0) 
 	{
@@ -284,6 +578,36 @@ double simpleQ3(VectorXd arr)
 	return q3;
 }
 
+double* getQ3(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+	double* q3 = new double[mat.rows()];
+
+	for (int i = 0; i < mat.rows(); i++) {
+		Eigen::VectorXd upper_half = mat.row(i).segment((mat.cols() + 1) / 2, mat.cols() / 2);
+		sort(upper_half.data(), upper_half.data() + upper_half.size());
+		if (upper_half.size() % 2 == 0)
+		{
+			q3[i] = (upper_half(upper_half.size() / 2 - 1) + upper_half(upper_half.size() / 2)) / 2.0;
+		}
+		else
+		{
+			q3[i] = upper_half(upper_half.size() / 2);
+		}
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleQ3]------" << endl;
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		cout << "row " << i << " : " << q3[i] << endl;
+	}
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+	return q3;
+}
+
 double simpleIQR(VectorXd arr)
 {
 	auto start = chrono::high_resolution_clock::now();
@@ -297,6 +621,35 @@ double simpleIQR(VectorXd arr)
 	chrono::duration<double, milli> duration = end - start;
 	cout << "-----[simpleIQR]------" << endl;
 	cout << "value : " << iqr << endl;
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+	return iqr;
+}
+
+double* getIQR(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	//double q1 = simpleQ1(arr);
+	//double q3 = simpleQ3(arr);
+	//double iqr = q3 - q1;
+	const double* q1 = getQ1(mat);
+	const double* q3 = getQ3(mat);
+	double* iqr = new double[mat.rows()];
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		iqr[i] = q3[i] - q1[i];
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleIQR]------" << endl;
+	//cout << "value : " << iqr << endl;
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+		cout << "row " << i << " : " << iqr[i] << endl;
+	}
 	cout << "duration : " << duration.count() << "ms" << endl;
 	cout << "----------------------" << endl;
 	return iqr;
@@ -670,48 +1023,6 @@ MatrixXd MgetSrcDataPerCycle(_ST_FILE_INFO* fileInfo)
 }
 
 
-MatrixXd getSrcDataPerCycleM(_ST_FILE_INFO* fileInfo)
-{
-	//안됨
-	if (fileInfo->nRawPos == 0)
-	{
-		fileInfo->nRawPos += sizeof(int) + fileInfo->nJsonSize;
-	}
-	fileInfo->nRawPos += sizeof(double); //Time
-	int rowLen = fileInfo->sources.size();
-	int colLen = (int)fileInfo->sources[0]["sampleRate"];
-	MatrixXd mat(rowLen, colLen);
-	for (size_t i = 0; i < rowLen; i++)
-	{
-		mat.row(i) = VectorXd::Constant(colLen, i);
-		memcpy(&mat(i, 0), fileInfo->dataBuffer + fileInfo->nRawPos, colLen * sizeof(double));
-		fileInfo->nRawPos += colLen * sizeof(double);
-	}
-	return mat;
-	//왜 안될까
-	//if (fileInfo->nRawPos == 0)
-	//{
-	//	fileInfo->nRawPos += sizeof(int) + fileInfo->nJsonSize;
-	//}
-	//fileInfo->nRawPos += sizeof(double); //Time
-
-	//int numSources = fileInfo->sources.size();
-	//
-	////MatrixXd rawData(numSources, 0);
-	//MatrixXd rawData(numSources, (int)fileInfo->sources[0]["sampleRate"]);
-	//for (int i = 0; i < numSources; i++)
-	//{
-	//	int dataSize = (int)fileInfo->sources[i]["sampleRate"];
-	//	//rawData.conservativeResize(numSources, dataSize);
-	//	memcpy(&rawData(i, 0), fileInfo->dataBuffer + fileInfo->nRawPos, dataSize * sizeof(double));
-	//	cout << "fileInfo->nRawPos : " << fileInfo->nRawPos << endl;
-	//	cout << "dataSize * sizeof(double) : " << dataSize * sizeof(double) << endl;
-	//	fileInfo->nRawPos += dataSize * sizeof(double);
-	//}
-
-	//return rawData;
-}
-
 std::vector<std::vector<double>> getFftDataPerCycle(_ST_FILE_INFO* fileInfo)
 {
 	if (fileInfo->nFftPos == 0)
@@ -759,56 +1070,13 @@ MatrixXd MgetFftDataPerCycle(_ST_FILE_INFO* fileInfo)
 }
 
 
-MatrixXd getFftDataPerCycleM(_ST_FILE_INFO* fileInfo)
-{
-	if (fileInfo->nFftPos == 0)
-	{
-		fileInfo->nFftPos += sizeof(int) + fileInfo->nJsonSize + sizeof(double) + fileInfo->nRawSize;
-	}
-	int fftSize = 2048;
-	int numSources = fileInfo->sources.size();
-	MatrixXd fftData(numSources, 0);
-	for (int i = 0; i < numSources; i++)
-	{
-		fftData.conservativeResize(numSources, fftSize);
-		memcpy(&fftData(i, 0), fileInfo->dataBuffer + fileInfo->nFftPos, fftSize * sizeof(double));
-		fileInfo->nFftPos += fftSize * sizeof(double);
-	}
-	return fftData;
-}
-
-
-
-double* MsimpleRMS(MatrixXd mat)
-{
-	auto start = chrono::high_resolution_clock::now();
-
-	double* rms = new double[mat.rows()];
-	int nCnt = mat.cols();
-	for (size_t i = 0; i < mat.rows(); i++)
-	{
-
-		auto ret = numext::sqrt((mat.row(i).squaredNorm()) / nCnt);
-		cout << "result " << i << " : " << ret << endl;
-		rms[i] = ret;
-	}
-
-	auto end = chrono::high_resolution_clock::now();
-	chrono::duration<double, milli> duration = end - start;
-	cout << "-----[simpleRMS]------" << endl;
-	//cout << "value : " << rms << endl;
-	cout << "duration : " << duration.count() << "ms" << endl;
-	cout << "----------------------" << endl;
-
-	return rms;
-}
 
 int main(){
 	//VectorXd arr(12);
 	//arr <<  65, 70.5 ,70.5, 75, 80,80, 82, 85, 90.5,90.5, 95, 100;
 
 	//readBinFile2();
-	//VectorXd v = Map<VectorXd, Unaligned>(rawDatas[0].data(), rawDatas[0].size());
+	//VectorXd v = Map<VectorXd, Unaligned>(rawDatas[1].data(), rawDatas[1].size());
 	//toCsv();
 	//simpleRMS(v);
 	//simpleMEAN(v);
@@ -886,15 +1154,27 @@ int main(){
 	//MatrixXd test = getFftDataPerCycleM(fileInfo);
 	//cout << "test" << test.col(0) << endl;
 	
-	//MatrixXd test = getSrcDataPerCycleM(fileInfo);
+	//MatrixXd test = MgetSrcDataPerCycle(fileInfo);
 	//cout << "?? " << test.row(239999) << endl;
 	//double* ret = MsimpleRMS(test);
 
+	//getRMS(test);
 	//
 	//for (size_t i = 0; i < 3; i++)
 	//{
 	//	cout << "ret ?? " << ret[i] << endl;
 	//}
+
+	MatrixXd test = MgetSrcDataPerCycle(fileInfo);
+	//getMEANG(test);
+	//getSTDEV(test);
+	//getKURTOSIS(test);
+	//getSKEWNESS(test);
+	//getMODE(test);
+	//getMEDIAN(test);
+	//getQ1(test);
+	//getQ3(test);
+	//getIQR(test);
+
 	delete fileInfo;
 }
-
