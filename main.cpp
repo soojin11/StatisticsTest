@@ -452,13 +452,13 @@ bool toCsv()
 		stringstream ss;
 		tm tm;
 		gmtime_s(&tm, &time);
-		ss << "test_" << put_time(&tm, "%Y%m%d_%H%M%S") << ".csv";
+		ss << "test_fft_" << put_time(&tm, "%Y%m%d_%H%M%S") << ".csv";
 		string fileName = ss.str();
 		ofstream dataFile(fileName, ios_base::app);
 
-		for (size_t j = 0; j < rawDatas[0].size(); j++)
+		for (size_t j = 0; j < fftDatas[0].size(); j++)
 		{
-			dataFile << rawDatas[0][j] << "\n";
+			dataFile << fftDatas[2][j] << "\n";
 		}
 
 		dataFile.close();
@@ -488,22 +488,21 @@ void getResults()
 
 struct _ST_FILE_INFO
 {
-	int nFileSize = 0;
-	int nSrcCnt = 0;
-	int nAnnoCnt = 0;
-	int nCycleCnt = 0;
-	//int nCycleByte = 0;
-	int nFftSize = 0;
-	int nJsonCnt = 0;
-	int nCrtPosition = 0;
-	int nRawPos = 0;
-	int nFftPos = 0;
-	json daqArray = json::array();
+	int nFileSize = 0; //파일 총 크기(byte)
+	int nAnnoCnt = 0; //annotation 개수
+	int nCycleCnt = 0; //몇초 데이터인지 1cnt = 1s
+	int nRawSize = 0; //raw 데이터 크기(byte)
+	int nFftSize = 0; //fft 데이터 크기(byte)
+	int nJsonSize = 0; //json 크기(byte)
+	int nRawPos = 0; //rawData pointer 위치
+	int nFftPos = 0; //fftData pointer 위치
+	json sources = json::array(); //enable된 소스들
 	char* dataBuffer = nullptr;
 };
 
 void openFile(const char* path, _ST_FILE_INFO* fileInfo)
 {
+	//.bin이 아닐 때 예외 처리하거나 데이터 형식이 다르면 예외처리 필요
 	try
 	{
 		//Open File
@@ -529,18 +528,18 @@ void getJsonData(_ST_FILE_INFO* fileInfo)
 {
 	try
 	{
+		int nReadPos = 0;
 		int* jsonCntBin = new int;
 		memcpy(jsonCntBin, fileInfo->dataBuffer, sizeof(int));
-		fileInfo->nCrtPosition += sizeof(int);
-		fileInfo->nJsonCnt = static_cast<int>(*jsonCntBin);
+		nReadPos += sizeof(int);
+		fileInfo->nJsonSize = static_cast<int>(*jsonCntBin);
 
-		char* jsonData = new char[fileInfo->nJsonCnt + 1];
-		memcpy(jsonData, fileInfo->dataBuffer + fileInfo->nCrtPosition, fileInfo->nJsonCnt);
-		fileInfo->nCrtPosition += fileInfo->nJsonCnt;
-		//추가 : 여기서 rawCrtPosition = nCrtPostion
-		fileInfo->nRawPos = fileInfo->nCrtPosition;
+		char* jsonData = new char[fileInfo->nJsonSize + 1];
+		memcpy(jsonData, fileInfo->dataBuffer + nReadPos, fileInfo->nJsonSize);
+		nReadPos += fileInfo->nJsonSize;
 
-		jsonData[fileInfo->nJsonCnt] = '\0';
+
+		jsonData[fileInfo->nJsonSize] = '\0';
 		cout << "JSON DATA : " << jsonData << endl;
 
 		const json parsedJson = json::parse(jsonData);
@@ -553,11 +552,9 @@ void getJsonData(_ST_FILE_INFO* fileInfo)
 				daq["coupling"] = parsedJson["ch"][i]["coupling"];
 				daq["sampleRate"] = parsedJson["ch"][i]["sampleRate"];
 				daq["scale"] = parsedJson["ch"][i]["scale"];
-				fileInfo->daqArray.push_back(daq);
+				fileInfo->sources.push_back(daq);
 			}
 		}
-
-		fileInfo->nSrcCnt = fileInfo->daqArray.size();
 
 		delete jsonCntBin;
 		delete[] jsonData;
@@ -605,23 +602,17 @@ void getCycleCnt(_ST_FILE_INFO* fileInfo)
 {
 	try
 	{
-		const int totalDataByte = fileInfo->nFileSize - sizeof(int) - fileInfo->nJsonCnt - WGS_BYTE - sizeof(int) - (fileInfo->nAnnoCnt * 8);
-		int oneCycle = sizeof(double); //Time
-		//int oneCycleLength = 1; //Time
+		const int totalDataByte = fileInfo->nFileSize - sizeof(int) - fileInfo->nJsonSize - WGS_BYTE - sizeof(int) - (fileInfo->nAnnoCnt * 8);
 		const int fftRate = 2048;
-		for (size_t i = 0; i < fileInfo->daqArray.size(); i++)
+		for (size_t i = 0; i < fileInfo->sources.size(); i++)
 		{
-			int rate = (fileInfo->daqArray[i]["sampleRate"]);
-			//oneCycleLength += rate + fftRate;
-			oneCycle += sizeof(double) * (rate + fftRate);
+			int srcRate = (fileInfo->sources[i]["sampleRate"]);
 			fileInfo->nFftSize += sizeof(double) * fftRate;
+			fileInfo->nRawSize += sizeof(double) * srcRate;
 		}
 		fileInfo->nFftSize += sizeof(double) * fftRate;
-		//oneCycleLength += fftRate; //공통 X Axis
-		oneCycle += fftRate * sizeof(double); //공통 X Axis
-		//fileInfo->nCycleByte = oneCycle;
-		fileInfo->nCycleCnt = totalDataByte / oneCycle; //int가 아닐 때 에러처리 해야됨
-		cout << "nCycleCnt : " << fileInfo->nCycleCnt << " / " << "totalDataByte : " << totalDataByte << " / " << "oneCycle : " << oneCycle << endl;
+		fileInfo->nCycleCnt = totalDataByte / (fileInfo->nFftSize + fileInfo->nRawSize +sizeof(double)); //int가 아닐 때 에러처리 해야됨
+		cout << "nCycleCnt : " << fileInfo->nCycleCnt << " / " << "totalDataByte : " << totalDataByte << " / " << "oneCycle : " << (fileInfo->nFftSize + fileInfo->nRawSize + sizeof(double)) << endl;
 	}
 	catch (const std::exception&)
 	{
@@ -632,41 +623,185 @@ void getCycleCnt(_ST_FILE_INFO* fileInfo)
 
 std::vector<std::vector<double>> getSrcDataPerCycle(_ST_FILE_INFO* fileInfo)
 {
-	std::vector<std::vector<double>>  rawData(fileInfo->nSrcCnt);
-	fileInfo->nRawPos += sizeof(double); //Time
-	//fileInfo->nCrtPosition += sizeof(double);//Time 
-	for (int i = 0; i < fileInfo->nSrcCnt; i++)
+	if (fileInfo->nRawPos == 0)
 	{
-		cout << "fileInfo->nRawPos : " << fileInfo->nRawPos << endl;
-
-		int dataSize = (int)fileInfo->daqArray[i]["sampleRate"];
-		rawData[i].resize(dataSize);
-		//memcpy(&rawData[i][0], fileInfo->dataBuffer + fileInfo->nCrtPosition, dataSize * sizeof(double));
-		memcpy(&rawData[i][0], fileInfo->dataBuffer + fileInfo->nRawPos, dataSize * sizeof(double));
-		//fileInfo->nCrtPosition += dataSize * sizeof(double);
-		fileInfo->nRawPos += dataSize * sizeof(double);
-		//cout << "nRawPose : " << fileInfo->nRawPos << " / " << "nCrtPos : " << fileInfo->nCrtPosition << endl;
+		fileInfo->nRawPos += sizeof(int) + fileInfo->nJsonSize;
 	}
-	fileInfo->nFftPos = fileInfo->nRawPos;
-	//fileInfo->nRawPos = fileInfo->nCrtPosition;
+	std::vector<std::vector<double>>  rawData(fileInfo->sources.size());
+	fileInfo->nRawPos += sizeof(double); //Time
+	for (int i = 0; i < fileInfo->sources.size(); i++)
+	{
+		int dataSize = (int)fileInfo->sources[i]["sampleRate"];
+		rawData[i].resize(dataSize);
+		memcpy(&rawData[i][0], fileInfo->dataBuffer + fileInfo->nRawPos, dataSize * sizeof(double));
+		fileInfo->nRawPos += dataSize * sizeof(double);
+	}
 	return rawData;
+}
+
+MatrixXd MgetSrcDataPerCycle(_ST_FILE_INFO* fileInfo)
+{
+	if (fileInfo->nRawPos == 0)
+	{
+		fileInfo->nRawPos += sizeof(int) + fileInfo->nJsonSize;
+	}
+	std::vector<std::vector<double>>  rawData(fileInfo->sources.size());
+	fileInfo->nRawPos += sizeof(double); //Time
+	for (int i = 0; i < fileInfo->sources.size(); i++)
+	{
+		int dataSize = (int)fileInfo->sources[i]["sampleRate"];
+		rawData[i].resize(dataSize);
+		memcpy(&rawData[i][0], fileInfo->dataBuffer + fileInfo->nRawPos, dataSize * sizeof(double));
+		fileInfo->nRawPos += dataSize * sizeof(double);
+	}
+	//return rawData;
+	int rows = rawData.size();
+	int cols = rawData[0].size();
+
+	MatrixXd mat(rows, cols);
+
+	for (int i = 0; i < rows; i++) {
+		for (int j = 0; j < cols; j++) {
+			mat(i, j) = rawData[i][j];
+		}
+	}
+
+	return mat;
+}
+
+
+MatrixXd getSrcDataPerCycleM(_ST_FILE_INFO* fileInfo)
+{
+	//안됨
+	if (fileInfo->nRawPos == 0)
+	{
+		fileInfo->nRawPos += sizeof(int) + fileInfo->nJsonSize;
+	}
+	fileInfo->nRawPos += sizeof(double); //Time
+	int rowLen = fileInfo->sources.size();
+	int colLen = (int)fileInfo->sources[0]["sampleRate"];
+	MatrixXd mat(rowLen, colLen);
+	for (size_t i = 0; i < rowLen; i++)
+	{
+		mat.row(i) = VectorXd::Constant(colLen, i);
+		memcpy(&mat(i, 0), fileInfo->dataBuffer + fileInfo->nRawPos, colLen * sizeof(double));
+		fileInfo->nRawPos += colLen * sizeof(double);
+	}
+	return mat;
+	//왜 안될까
+	//if (fileInfo->nRawPos == 0)
+	//{
+	//	fileInfo->nRawPos += sizeof(int) + fileInfo->nJsonSize;
+	//}
+	//fileInfo->nRawPos += sizeof(double); //Time
+
+	//int numSources = fileInfo->sources.size();
+	//
+	////MatrixXd rawData(numSources, 0);
+	//MatrixXd rawData(numSources, (int)fileInfo->sources[0]["sampleRate"]);
+	//for (int i = 0; i < numSources; i++)
+	//{
+	//	int dataSize = (int)fileInfo->sources[i]["sampleRate"];
+	//	//rawData.conservativeResize(numSources, dataSize);
+	//	memcpy(&rawData(i, 0), fileInfo->dataBuffer + fileInfo->nRawPos, dataSize * sizeof(double));
+	//	cout << "fileInfo->nRawPos : " << fileInfo->nRawPos << endl;
+	//	cout << "dataSize * sizeof(double) : " << dataSize * sizeof(double) << endl;
+	//	fileInfo->nRawPos += dataSize * sizeof(double);
+	//}
+
+	//return rawData;
 }
 
 std::vector<std::vector<double>> getFftDataPerCycle(_ST_FILE_INFO* fileInfo)
 {
-	std::vector<std::vector<double>>  fftData(fileInfo->nSrcCnt);
-	for (int i = 0; i < fileInfo->nSrcCnt; i++)
+	if (fileInfo->nFftPos == 0)
 	{
-		int fftSize = 2048;
+		fileInfo->nFftPos += sizeof(int) + fileInfo->nJsonSize + sizeof(double) + fileInfo->nRawSize;
+	}
+	std::vector<std::vector<double>>  fftData(fileInfo->sources.size());
+	int fftSize = 2048;
+	for (int i = 0; i < fileInfo->sources.size(); i++)
+	{
 		fftData[i].resize(fftSize);
-		//memcpy(&fftData[i][0], fileInfo->dataBuffer + fileInfo->nCrtPosition, fftSize * sizeof(double));
 		memcpy(&fftData[i][0], fileInfo->dataBuffer + fileInfo->nFftPos, fftSize * sizeof(double));
-		//fileInfo->nCrtPosition += fftSize * sizeof(double);
-		fileInfo->nRawPos += fftSize * sizeof(double);
+		fileInfo->nFftPos += fftSize * sizeof(double);
 	}
 	return fftData;
 }
 
+MatrixXd MgetFftDataPerCycle(_ST_FILE_INFO* fileInfo)
+{
+	if (fileInfo->nFftPos == 0)
+	{
+		fileInfo->nFftPos += sizeof(int) + fileInfo->nJsonSize + sizeof(double) + fileInfo->nRawSize;
+	}
+	std::vector<std::vector<double>>  fftData(fileInfo->sources.size());
+	int fftSize = 2048;
+	for (int i = 0; i < fileInfo->sources.size(); i++)
+	{
+		fftData[i].resize(fftSize);
+		memcpy(&fftData[i][0], fileInfo->dataBuffer + fileInfo->nFftPos, fftSize * sizeof(double));
+		fileInfo->nFftPos += fftSize * sizeof(double);
+	}
+	//return fftData;
+	int rows = fftData.size();
+	int cols = fftData[0].size();
+
+	MatrixXd mat(rows, cols);
+
+	for (int i = 0; i < rows; i++) {
+		for (int j = 0; j < cols; j++) {
+			mat(i, j) = fftData[i][j];
+		}
+	}
+
+	return mat;
+}
+
+
+MatrixXd getFftDataPerCycleM(_ST_FILE_INFO* fileInfo)
+{
+	if (fileInfo->nFftPos == 0)
+	{
+		fileInfo->nFftPos += sizeof(int) + fileInfo->nJsonSize + sizeof(double) + fileInfo->nRawSize;
+	}
+	int fftSize = 2048;
+	int numSources = fileInfo->sources.size();
+	MatrixXd fftData(numSources, 0);
+	for (int i = 0; i < numSources; i++)
+	{
+		fftData.conservativeResize(numSources, fftSize);
+		memcpy(&fftData(i, 0), fileInfo->dataBuffer + fileInfo->nFftPos, fftSize * sizeof(double));
+		fileInfo->nFftPos += fftSize * sizeof(double);
+	}
+	return fftData;
+}
+
+
+
+double* MsimpleRMS(MatrixXd mat)
+{
+	auto start = chrono::high_resolution_clock::now();
+
+	double* rms = new double[mat.rows()];
+	int nCnt = mat.cols();
+	for (size_t i = 0; i < mat.rows(); i++)
+	{
+
+		auto ret = numext::sqrt((mat.row(i).squaredNorm()) / nCnt);
+		cout << "result " << i << " : " << ret << endl;
+		rms[i] = ret;
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "-----[simpleRMS]------" << endl;
+	//cout << "value : " << rms << endl;
+	cout << "duration : " << duration.count() << "ms" << endl;
+	cout << "----------------------" << endl;
+
+	return rms;
+}
 
 int main(){
 	//VectorXd arr(12);
@@ -674,6 +809,7 @@ int main(){
 
 	//readBinFile2();
 	//VectorXd v = Map<VectorXd, Unaligned>(rawDatas[0].data(), rawDatas[0].size());
+	//toCsv();
 	//simpleRMS(v);
 	//simpleMEAN(v);
 	//simpleMEANH(v);
@@ -689,22 +825,76 @@ int main(){
 
 
 	_ST_FILE_INFO* fileInfo = new _ST_FILE_INFO();
-	openFile(PATH, fileInfo);
-	getJsonData(fileInfo);
-	getAnnotation(fileInfo);
-	getCycleCnt(fileInfo);
-	//getSrcDataPerCycle(fileInfo)[0].size();
-		 
-	for (int i = 0; i < fileInfo->nCycleCnt; i++)
-	{
-		std::vector<std::vector<double>> data = getSrcDataPerCycle(fileInfo);
-		cout << "첫번째 데이터 " << i << " : " << data[0][0] << endl;
-		fileInfo->nRawPos += fileInfo->nFftSize;
-		VectorXd tr = Map<VectorXd, Unaligned>(data[0].data(), data[0].size());
-		simpleRMS(tr);
-		//일단 여기까지한게 X rawData까지만 한거
+	int step = 0;
+	while (step < 5) {
+		switch (step) {
+		case 0:
+			openFile(PATH, fileInfo);
+			break;
+		case 1:
+			getJsonData(fileInfo);
+			break;
+		case 2:
+			getAnnotation(fileInfo);
+			break;
+		case 3:
+			getCycleCnt(fileInfo);
+			break;
+		}
+		step++;
 	}
 
+
+	//for (int i = 0; i < fileInfo->nCycleCnt; i++)
+	//{
+	//	std::vector<std::vector<double>> data = getSrcDataPerCycle(fileInfo);
+	//	cout << "RAW " << i << " : " << data[0][0] << endl;
+	//	fileInfo->nRawPos += fileInfo->nFftSize;
+	//	VectorXd tr = Map<VectorXd, Unaligned>(data[0].data(), data[0].size());
+	//	simpleRMS(tr);
+	//	simpleMEAN(tr);
+	//}
+
+	//for (int i = 0; i < fileInfo->nCycleCnt; i++)
+	//{
+	//	std::vector<std::vector<double>> data = getFftDataPerCycle(fileInfo);
+	//	cout << "FFT " << i << " : " << data[0][0] << endl;
+	//	fileInfo->nRawPos += fileInfo->nFftSize;
+	//	VectorXd tr = Map<VectorXd, Unaligned>(data[0].data(), data[0].size());
+	//	simpleRMS(tr);
+	//	simpleMEAN(tr);
+	//}
+
+	
+	//vector > MatrixXd 바꿈
+	//std::vector<std::vector<double>> rawv = getSrcDataPerCycle(fileInfo);
+	//for (int i = 0; i < fileInfo->sources.size(); i++)
+	//{
+	//	cout << "RAW " << i << " : " << rawv[i][0] << endl;
+	//}
+	//std::vector<std::vector<double>> fftv = getFftDataPerCycle(fileInfo);
+	//for (int i = 0; i < fileInfo->sources.size(); i++)
+	//{
+	//	cout << "FFT " << i << " : " << fftv[i][0] << endl;
+	//}
+
+	//MatrixXd test = getSrcDataPerCycleM(fileInfo);
+	//VectorXd aa = test.row(0);
+	//simpleRMS(aa);
+	//aasimpleRMS(test);
+
+	//MatrixXd test = getFftDataPerCycleM(fileInfo);
+	//cout << "test" << test.col(0) << endl;
+	
+	//MatrixXd test = getSrcDataPerCycleM(fileInfo);
+	//cout << "?? " << test.row(239999) << endl;
+	//double* ret = MsimpleRMS(test);
+
+	//
+	//for (size_t i = 0; i < 3; i++)
+	//{
+	//	cout << "ret ?? " << ret[i] << endl;
+	//}
 	delete fileInfo;
 }
 
