@@ -71,7 +71,7 @@ double simpleMEAN(VectorXd arr)
 	return mean;
 }
 
-double* getMean(MatrixXd mat)
+double* getMEAN(MatrixXd mat)
 {
 	auto start = chrono::high_resolution_clock::now();
 	double* mean = new double[mat.rows()];
@@ -766,6 +766,20 @@ bool readBinFile2()
 			crtPosition += dataSize * 8;
 		}
 
+		//cycle 수대로 다 넣은 것
+		//for (int i = 0; i < nSrcCnt; i++)
+		//{
+		//	int dataSize = (int)daqArr[i]["sampleRate"];
+		//	rawDatas[i].resize(dataSize * cycleCnt);
+		//	int nextCycle = crtPosition;
+		//	for (int j = 0; j < cycleCnt * dataSize; j += dataSize)
+		//	{
+		//		memcpy(&rawDatas[i][j], dataBuffer + nextCycle, dataSize * sizeof(double));
+		//		nextCycle += oneCycle;
+		//	}
+		//	crtPosition += dataSize * 8;
+		//}
+
 
 		for (int i = 0; i < nSrcCnt; i++)
 		{
@@ -1068,8 +1082,84 @@ MatrixXd MgetFftDataPerCycle(_ST_FILE_INFO* fileInfo)
 
 	return mat;
 }
+typedef double* (*FuncPtr)(Eigen::MatrixXd value);
+_ST_FILE_INFO* fInfo;
 
+enum class _Statistics
+{
+	RMS,
+	Mean,
+	MeanH,
+	MeanG,
+	StDev,
+	Skew,
+	Kurt,
+	Mode,
+	Median,
+	Q1,
+	Q3,
+	IQR,
+};
 
+void getStats(_ST_FILE_INFO* fileInfo, FuncPtr func) 
+{
+	for (int i = 0; i < fileInfo->nCycleCnt; i++)
+	{
+		MatrixXd value = MgetSrcDataPerCycle(fileInfo);
+		double* result = func(value);
+		fileInfo->nRawPos += fileInfo->nFftSize;
+		//여기서 callback함수에 result 보내주기
+	}
+}
+
+//얘를 front에서 부르면 됨 _Statistics는 int로 바꿔야함
+void fGetStat(_ST_FILE_INFO* fileInfo, _Statistics stat)
+{
+	FuncPtr function;
+	switch (stat)
+	{
+	case _Statistics::RMS:
+		function = &getRMS;
+		break;
+	case _Statistics::Mean:
+		function = &getMEAN;
+		break;
+	case _Statistics::MeanH:
+		function = &getMEANH;
+		break;
+	case _Statistics::MeanG:
+		function = &getMEANG;
+		break;
+	case _Statistics::StDev:
+		function = &getSTDEV;
+		break;
+	case _Statistics::Skew:
+		function = &getSKEWNESS;
+		break;
+	case _Statistics::Kurt:
+		function = &getKURTOSIS;
+		break;
+	case _Statistics::Mode:
+		function = &getMODE;
+		break;
+	case _Statistics::Median:
+		function = &getMEDIAN;
+		break;
+	case _Statistics::Q1:
+		function = &getQ1;
+		break;
+	case _Statistics::Q3:
+		function = &getQ3;
+		break;
+	case _Statistics::IQR:
+		function = &getIQR;
+		break;
+	default:
+		function = &getRMS;
+		break;
+	}
+	getStats(fileInfo, function);
+}
 
 int main(){
 	//VectorXd arr(12);
@@ -1165,7 +1255,7 @@ int main(){
 	//	cout << "ret ?? " << ret[i] << endl;
 	//}
 
-	MatrixXd test = MgetSrcDataPerCycle(fileInfo);
+	//MatrixXd test = MgetSrcDataPerCycle(fileInfo);
 	//getMEANG(test);
 	//getSTDEV(test);
 	//getKURTOSIS(test);
@@ -1175,6 +1265,33 @@ int main(){
 	//getQ1(test);
 	//getQ3(test);
 	//getIQR(test);
+
+	//for (int i = 0; i < fileInfo->nCycleCnt; i++)
+	//{
+	//	MatrixXd test = MgetSrcDataPerCycle(fileInfo);
+	//	getMEAN(test);
+	//	fileInfo->nRawPos += fileInfo->nFftSize;
+	//}
+
+//	for (int i = 0; i < fileInfo->nCycleCnt; i++)
+//	{
+//		MatrixXd test = MgetFftDataPerCycle(fileInfo);
+//		getSTDEV(test);
+//		getKURTOSIS(test);
+//		getSKEWNESS(test);
+//		getMODE(test);
+//		getMEDIAN(test);
+//		getQ1(test);
+//		getQ3(test);
+//		getIQR(test);
+//		getRMS(test);
+//		getMEAN(test);
+//	}
+	auto start = chrono::high_resolution_clock::now();
+	fGetStat(fileInfo, _Statistics::Mean);
+	auto end = chrono::high_resolution_clock::now();
+	chrono::duration<double, milli> duration = end - start;
+	cout << "Total duration : " << duration.count() << "ms" << endl;
 
 	delete fileInfo;
 }
