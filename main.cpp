@@ -16,6 +16,7 @@ using namespace Eigen;
 constexpr char PATH[] = "D:\\statistics\\samples\\114557_869.bin"; //anno 없는데 wgs있음
 //constexpr char PATH[] = "D:\\statistics\\samples\\031713_164.bin";
 
+constexpr char PATH2[] = "D:\\statistics\\183512_090_abnormal.bin";
 
 
 double simpleRMS(VectorXd arr)
@@ -663,7 +664,7 @@ bool readBinFile2()
 {
 	try
 	{
-		ifstream file(PATH, ios::binary);
+		ifstream file(PATH2, ios::binary);
 		const char nullStr = '\0';
 		if (!file || !file.good()) return false;
 		
@@ -788,6 +789,19 @@ bool readBinFile2()
 			memcpy(&fftDatas[i][0], dataBuffer + crtPosition, fftSize * sizeof(double));
 			crtPosition += fftSize * sizeof(double);
 		}
+
+		//for (int i = 0; i < nSrcCnt; i++)
+		//{
+		//	int dataSize = (int)daqArr[i]["sampleRate"];
+		//	rawDatas[i].resize(dataSize * cycleCnt);
+		//	int nextCycle = crtPosition;
+		//	for (int j = 0; j < cycleCnt * dataSize; j += dataSize)
+		//	{
+		//		memcpy(&rawDatas[i][j], dataBuffer + nextCycle, dataSize * sizeof(double));
+		//		nextCycle += oneCycle;
+		//	}
+		//	crtPosition += dataSize * 8;
+		//}
 		
 		file.close();
 		//DELETE MEMORY
@@ -819,13 +833,19 @@ bool toCsv()
 		stringstream ss;
 		tm tm;
 		gmtime_s(&tm, &time);
-		ss << "test_fft_" << put_time(&tm, "%Y%m%d_%H%M%S") << ".csv";
-		string fileName = ss.str();
+		//ss << "183512_090_FFT_idx_1" << put_time(&tm, "%Y%m%d_%H%M%S") << ".csv";
+		//ss << "raw_869_Idx_ZERO_Y_Axis.csv";
+
+		string fileName = "raw_869_Idx_ZERO_Y_Axis.csv";
 		ofstream dataFile(fileName, ios_base::app);
 
-		for (size_t j = 0; j < fftDatas[0].size(); j++)
+		//for (size_t j = 0; j < fftDatas[1].size(); j++)
+		//{
+		//	dataFile << fftDatas[1][j] << "\n";
+		//}
+		for (size_t j = 0; j < rawDatas[1].size(); j++)
 		{
-			dataFile << fftDatas[2][j] << "\n";
+			dataFile << rawDatas[1][j] << "\n";
 		}
 
 		dataFile.close();
@@ -1165,9 +1185,9 @@ int main(){
 	//VectorXd arr(12);
 	//arr <<  65, 70.5 ,70.5, 75, 80,80, 82, 85, 90.5,90.5, 95, 100;
 
-	//readBinFile2();
-	//VectorXd v = Map<VectorXd, Unaligned>(rawDatas[1].data(), rawDatas[1].size());
-	//toCsv();
+	readBinFile2();
+	VectorXd v = Map<VectorXd, Unaligned>(rawDatas[0].data(), rawDatas[0].size());
+	toCsv();
 	//simpleRMS(v);
 	//simpleMEAN(v);
 	//simpleMEANH(v);
@@ -1182,25 +1202,25 @@ int main(){
 	//cout << "최대 ? " << v.maxCoeff() << endl;
 
 
-	_ST_FILE_INFO* fileInfo = new _ST_FILE_INFO();
-	int step = 0;
-	while (step < 5) {
-		switch (step) {
-		case 0:
-			openFile(PATH, fileInfo);
-			break;
-		case 1:
-			getJsonData(fileInfo);
-			break;
-		case 2:
-			getAnnotation(fileInfo);
-			break;
-		case 3:
-			getCycleCnt(fileInfo);
-			break;
-		}
-		step++;
-	}
+	//_ST_FILE_INFO* fileInfo = new _ST_FILE_INFO();
+	//int step = 0;
+	//while (step < 5) {
+	//	switch (step) {
+	//	case 0:
+	//		openFile(PATH, fileInfo);
+	//		break;
+	//	case 1:
+	//		getJsonData(fileInfo);
+	//		break;
+	//	case 2:
+	//		getAnnotation(fileInfo);
+	//		break;
+	//	case 3:
+	//		getCycleCnt(fileInfo);
+	//		break;
+	//	}
+	//	step++;
+	//}
 
 
 	//for (int i = 0; i < fileInfo->nCycleCnt; i++)
@@ -1287,11 +1307,11 @@ int main(){
 //		getRMS(test);
 //		getMEAN(test);
 //	}
-	auto start = chrono::high_resolution_clock::now();
-	fGetStat(fileInfo, _Statistics::Mean);
-	auto end = chrono::high_resolution_clock::now();
-	chrono::duration<double, milli> duration = end - start;
-	cout << "Total duration : " << duration.count() << "ms" << endl;
+	//auto start = chrono::high_resolution_clock::now();
+	//fGetStat(fileInfo, _Statistics::Mean);
+	//auto end = chrono::high_resolution_clock::now();
+	//chrono::duration<double, milli> duration = end - start;
+	//cout << "Total duration : " << duration.count() << "ms" << endl;
 
-	delete fileInfo;
+	//delete fileInfo;
 }

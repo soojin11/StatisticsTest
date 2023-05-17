@@ -71,12 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(WGS_OUTPUT)shf\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(WGS_OUTPUT)shf\include;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(WGS_OUTPUT)shf\include;D:\WGS-Wave-Sense\wave-sense-daq\fftw;$(IncludePath)</IncludePath>
+    <LibraryPath>$(WGS_OUTPUT)shf\include;D:\WGS-Wave-Sense\wave-sense-daq\fftw;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(WGS_OUTPUT)shf\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(WGS_OUTPUT)shf\include;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(WGS_OUTPUT)shf\include;D:\WGS-Wave-Sense\wave-sense-daq\fftw;$(IncludePath)</IncludePath>
+    <LibraryPath>$(WGS_OUTPUT)shf\include;D:\WGS-Wave-Sense\wave-sense-daq\fftw;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
