@@ -1,23 +1,4 @@
 #include "main.h"
-#include <iostream>
-#include <fstream>
-#include <Eigen/Dense>
-#include <vector>
-#include <cstdint>
-#include <stdlib.h>
-#include <stdio.h>
-#include <json.hpp>
-#include <chrono>
-
-using json = nlohmann::json;
-using namespace std;
-using namespace Eigen;
-//constexpr char PATH[] = "D:\\statistics\\samples\\115052_624.bin"; //wgs두개임
-constexpr char PATH[] = "D:\\statistics\\samples\\114557_869.bin"; //anno 없는데 wgs있음
-//constexpr char PATH[] = "D:\\statistics\\samples\\031713_164.bin";
-
-constexpr char PATH2[] = "D:\\statistics\\183512_090_abnormal.bin";
-
 
 double simpleRMS(VectorXd arr)
 {
@@ -1180,138 +1161,216 @@ void fGetStat(_ST_FILE_INFO* fileInfo, _Statistics stat)
 	}
 	getStats(fileInfo, function);
 }
+json CMain::ReadJsonFile(const char* path)
+{
+	std::ifstream file(path);
+	if (!file.is_open())
+	{
+		return "";
+	}
+	json toJson;
+	file >> toJson;
+	file.close();
 
-int main(){
-	//VectorXd arr(12);
-	//arr <<  65, 70.5 ,70.5, 75, 80,80, 82, 85, 90.5,90.5, 95, 100;
+	return toJson;
+}
 
-	readBinFile2();
-	VectorXd v = Map<VectorXd, Unaligned>(rawDatas[0].data(), rawDatas[0].size());
-	toCsv();
-	//simpleRMS(v);
-	//simpleMEAN(v);
-	//simpleMEANH(v);
-	//simpleMEANG(v);
-	//simpleMODE(v);
-	//simpleMEDIAN(v);
-	//simpleKURTOSIS(v);
-	//simpleSTDEV(v);
-	//simpleSKEWNESS(v);
-	//simpleIQR(v);
-	//simpleMODES(v);
-	//cout << "최대 ? " << v.maxCoeff() << endl;
-
-
-	//_ST_FILE_INFO* fileInfo = new _ST_FILE_INFO();
-	//int step = 0;
-	//while (step < 5) {
-	//	switch (step) {
-	//	case 0:
-	//		openFile(PATH, fileInfo);
-	//		break;
-	//	case 1:
-	//		getJsonData(fileInfo);
-	//		break;
-	//	case 2:
-	//		getAnnotation(fileInfo);
-	//		break;
-	//	case 3:
-	//		getCycleCnt(fileInfo);
-	//		break;
-	//	}
-	//	step++;
-	//}
-
-
-	//for (int i = 0; i < fileInfo->nCycleCnt; i++)
-	//{
-	//	std::vector<std::vector<double>> data = getSrcDataPerCycle(fileInfo);
-	//	cout << "RAW " << i << " : " << data[0][0] << endl;
-	//	fileInfo->nRawPos += fileInfo->nFftSize;
-	//	VectorXd tr = Map<VectorXd, Unaligned>(data[0].data(), data[0].size());
-	//	simpleRMS(tr);
-	//	simpleMEAN(tr);
-	//}
-
-	//for (int i = 0; i < fileInfo->nCycleCnt; i++)
-	//{
-	//	std::vector<std::vector<double>> data = getFftDataPerCycle(fileInfo);
-	//	cout << "FFT " << i << " : " << data[0][0] << endl;
-	//	fileInfo->nRawPos += fileInfo->nFftSize;
-	//	VectorXd tr = Map<VectorXd, Unaligned>(data[0].data(), data[0].size());
-	//	simpleRMS(tr);
-	//	simpleMEAN(tr);
-	//}
-
+int CMain::GetWindowsIdx(std::string input)
+{
+	transform(input.begin(), input.end(), input.begin(), ::toupper);
 	
-	//vector > MatrixXd 바꿈
-	//std::vector<std::vector<double>> rawv = getSrcDataPerCycle(fileInfo);
-	//for (int i = 0; i < fileInfo->sources.size(); i++)
-	//{
-	//	cout << "RAW " << i << " : " << rawv[i][0] << endl;
-	//}
-	//std::vector<std::vector<double>> fftv = getFftDataPerCycle(fileInfo);
-	//for (int i = 0; i < fileInfo->sources.size(); i++)
-	//{
-	//	cout << "FFT " << i << " : " << fftv[i][0] << endl;
-	//}
+	if (input == "RECTANGLE") return (int)ENUM_WINDOWS_INDEX::rectangle;
+	else if (input == "HANN") return (int)ENUM_WINDOWS_INDEX::Hann;
+	else if (input == "HAMMING") return (int)ENUM_WINDOWS_INDEX::Hamming;
+	else if (input == "BLACKMAN") return (int)ENUM_WINDOWS_INDEX::Blackman;
+	else if (input == "FLAT_TOP") return (int)ENUM_WINDOWS_INDEX::Flat_top;
+	else return -1;
+}
 
-	//MatrixXd test = getSrcDataPerCycleM(fileInfo);
-	//VectorXd aa = test.row(0);
-	//simpleRMS(aa);
-	//aasimpleRMS(test);
+int CMain::GetViewMode(std::string input)
+{
+	std::transform(input.begin(), input.end(), input.begin(), ::toupper);
 
-	//MatrixXd test = getFftDataPerCycleM(fileInfo);
-	//cout << "test" << test.col(0) << endl;
-	
-	//MatrixXd test = MgetSrcDataPerCycle(fileInfo);
-	//cout << "?? " << test.row(239999) << endl;
-	//double* ret = MsimpleRMS(test);
+	if (input == "LINEAR") return (int)ENUM_VIEW_MODE::Linear;
+	else if (input == "DBV") return (int)ENUM_VIEW_MODE::DBV;
+	else return -1;
+}
 
-	//getRMS(test);
-	//
-	//for (size_t i = 0; i < 3; i++)
-	//{
-	//	cout << "ret ?? " << ret[i] << endl;
-	//}
+int CMain::GetCouplingType(std::string input)
+{
+	std::transform(input.begin(), input.end(), input.begin(), ::toupper);
 
-	//MatrixXd test = MgetSrcDataPerCycle(fileInfo);
-	//getMEANG(test);
-	//getSTDEV(test);
-	//getKURTOSIS(test);
-	//getSKEWNESS(test);
-	//getMODE(test);
-	//getMEDIAN(test);
-	//getQ1(test);
-	//getQ3(test);
-	//getIQR(test);
+	if (input == "DC") return 0;
+	else if (input == "AC") return 1;
+	else return -1;
+}
 
-	//for (int i = 0; i < fileInfo->nCycleCnt; i++)
-	//{
-	//	MatrixXd test = MgetSrcDataPerCycle(fileInfo);
-	//	getMEAN(test);
-	//	fileInfo->nRawPos += fileInfo->nFftSize;
-	//}
+int CMain::GetVoltageRange(std::string input)
+{
+	if (input == "500mV") return 13;
+	else if (input == "1V") return 5;
+	else if (input == "2.5V") return 3;
+	else if (input == "5V") return 2;
+	else return -1;
+}
 
-//	for (int i = 0; i < fileInfo->nCycleCnt; i++)
-//	{
-//		MatrixXd test = MgetFftDataPerCycle(fileInfo);
-//		getSTDEV(test);
-//		getKURTOSIS(test);
-//		getSKEWNESS(test);
-//		getMODE(test);
-//		getMEDIAN(test);
-//		getQ1(test);
-//		getQ3(test);
-//		getIQR(test);
-//		getRMS(test);
-//		getMEAN(test);
-//	}
-	//auto start = chrono::high_resolution_clock::now();
-	//fGetStat(fileInfo, _Statistics::Mean);
-	//auto end = chrono::high_resolution_clock::now();
-	//chrono::duration<double, milli> duration = end - start;
-	//cout << "Total duration : " << duration.count() << "ms" << endl;
+int CMain::GetStatIndex(std::string sName)
+{
+	transform(sName.begin(), sName.end(), sName.begin(), ::toupper);
+	if (sName == "RMS") return (int)EStatistics::RMS;
+	else if (sName == "MEAN") return (int)EStatistics::Mean;
+	else if (sName == "MEANH") return (int)EStatistics::MeanH;
+	else if (sName == "MEANG") return (int)EStatistics::MeanG;
+	else if (sName == "STDEV") return (int)EStatistics::StDev;
+	else if (sName == "SKEW") return (int)EStatistics::Skew;
+	else if (sName == "KURT") return (int)EStatistics::Kurt;
+	else if (sName == "MODE") return (int)EStatistics::Mode;
+	else if (sName == "MEDIAN") return (int)EStatistics::Median;
+	else if (sName == "Q1") return (int)EStatistics::Q1;
+	else if (sName == "Q3") return (int)EStatistics::Q3;
+	else if (sName == "IQR") return (int)EStatistics::IQR;
+	else if (sName == "MIN") return (int)EStatistics::Min;
+	else if (sName == "MAX") return (int)EStatistics::Max;
+	else if (sName == "RANGE") return (int)EStatistics::Range;
+	else if (sName == "PERCENTILE") return (int)EStatistics::Percentile;
+	else if (sName == "SAMPLERATE") return (int)EStatistics::SampleRate;
+	else if (sName == "SUM") return (int)EStatistics::Sum;
+	else if (sName == "COUNT") return (int)EStatistics::Count;
+	else if (sName == "HITCOUNTABOVE") return (int)EStatistics::HitCountAbove;
+	else if (sName == "HITCOUNTBELOW") return (int)EStatistics::HitCountBelow;
+	else if (sName == "POINTCOUNT") return (int)EStatistics::PointCount;
+	else if (sName == "TIMECOUNTABOVE") return (int)EStatistics::TimeCountAbove;
+	else if (sName == "TIMECOUNTBELOW") return (int)EStatistics::TimeCountBelow;
+	else if (sName == "MEANT") return (int)EStatistics::MeanT;
+	else if (sName == "INTERCEPT") return (int)EStatistics::Intercept;
+	else if (sName == "SLOPE") return (int)EStatistics::Slope;
+	else if (sName == "SLOPER2") return (int)EStatistics::SlopeR2;
+	else if (sName == "AREA") return (int)EStatistics::Area;
+	else if (sName == "MAXGAP") return (int)EStatistics::MaxGap;
+	else if (sName == "MINGAP") return (int)EStatistics::MinGap;
+	else if (sName == "TREND") return (int)EStatistics::Trend;
+	else if (sName == "CP") return (int)EStatistics::Cp;
+	else if (sName == "CPK") return (int)EStatistics::Cpk;
+	else if (sName == "FFT") return (int)EStatistics::Fft;
+	else return -1;
+}
 
-	//delete fileInfo;
+
+bool CMain::MappingRecipe(const char* path)
+{
+	try
+	{
+		json rcpJson = ReadJsonFile(path);
+		if (rcpJson == "")
+		{
+			throw std::runtime_error("Cannot open file");
+		}
+
+		if (rcpJson.count("window") < 1) throw std::runtime_error("window key does not exist");
+		auto windowArr = rcpJson["window"];
+		for (size_t i = 0; i < windowArr.size(); i++)
+		{
+			_ST_WINDOW w;
+			w.windowDataIdx = i;
+			w.statistic = GetStatIndex(windowArr[i]["statistics"]["sName"]);
+			if (w.statistic == (int)EStatistics::Fft)
+			{
+				auto fft = windowArr[i]["statistics"]["parameter1"];
+				w.fftInfos.fftWindowIdx = GetWindowsIdx(fft["windowIndex"]);
+				w.fftInfos.viewMode = GetViewMode(fft["viewMode"]);
+				w.fftInfos.dbvRange = (int)fft["dbvRange"];
+				w.fftInfos.freqStart = (double)fft["FreqStart"];
+				w.fftInfos.freqEnd = (double)fft["FreqEnd"];
+			}
+			if (w.statistic != (int)EStatistics::Fft && windowArr[i]["statistics"]["parameter1"] > 0)
+			{
+				w.params.push_back((double)windowArr[i]["statistics"]["parameter1"]);
+				if (windowArr[i]["statistics"]["parameter2"] > 0)
+				{
+					w.params.push_back((double)windowArr[i]["statistics"]["parameter2"]);
+				}
+				cout << "params" << w.params[0] << endl;
+
+			}
+			w.startType = (std::string)windowArr[i]["start"]["selectedType"];
+			w.startTime = (double)windowArr[i]["start"]["time"];
+			w.startVS = (std::string)windowArr[i]["start"]["virtualSensor"];
+
+			w.endType = (std::string)windowArr[i]["end"]["selectedType"];
+			w.endTime = (double)windowArr[i]["end"]["time"];
+			w.endLength = (double)windowArr[i]["end"]["length"];
+			w.endVS = (std::string)windowArr[i]["end"]["virtualSensor"];
+
+			w.period = (int)windowArr[i]["period"];
+
+			rcpWindows.push_back(w);
+		}
+		cout << "Mapping Rcp Succees / size : " << rcpWindows.size() << endl;
+		return true;
+	}
+	catch (const std::exception&e)
+	{
+		cout << "Mapping Rcp Error : " << e.what() << endl;
+		return false;
+	}
+}
+
+bool CMain::MappingSetting(const char* path)
+{
+	try
+	{
+		json setJson = ReadJsonFile(path);
+		if (setJson == "")
+		{
+			throw std::runtime_error("Cannot open setting file");
+		}
+		if (setJson.count("Hardware") < 1 || setJson.count("Software") < 1) throw std::runtime_error("key does not exist");
+		auto hard = setJson["Hardware"][0];
+		_hardware.enable = (bool)hard["enable"];
+		_hardware.daqModel = (std::string)hard["daqModel"];
+		_hardware.couplingType = GetCouplingType((std::string)hard["couplingType"]);
+		_hardware.voltageRange = GetVoltageRange((std::string)hard["voltRange"]);
+		_hardware.srcCnt = (int)hard["srcCnt"];
+
+		auto soft = setJson["Software"]["save"];
+		_software.bRawSave = (bool)soft["rawDataEnable"];
+		_software.rawDataStoragePeriod = (int)soft["rawDataStoragePeriod"];
+		_software.rawDataPath = (std::string)soft["rawDataFolderPath"];
+
+		_software.bWindowSave = (bool)soft["windowEnable"];
+		_software.bWindowRawSave = (bool)soft["windowInRawdataEnable"];
+		_software.windowStoragePeriod = (int)soft["windowStoragePeriod"];
+		_software.windowDataPath = (std::string)soft["windowFolderPath"];
+
+		cout << "Mapping Setting Success" << endl;
+		return true;
+	}
+	catch (const std::exception& e)
+	{
+		cout << "Mapping Setting Error : " << e.what() << endl;
+		return false;
+	}
+}
+
+CMain* cMain;
+
+EXPORT bool __stdcall mapRCP(const char* path) 
+{
+	cMain = new CMain();
+	//MappingRecipe(path);
+	cMain->MappingRecipe(path);
+	return true;
+}
+
+int main()
+{
+	string rcpPath = "D:\\recipeTest.json";
+	string setPath = "D:\\settingTest.json";
+
+
+	cMain = new CMain();
+
+	cMain->MappingRecipe(rcpPath.c_str());
+	cMain->MappingSetting(setPath.c_str());
+
 }
